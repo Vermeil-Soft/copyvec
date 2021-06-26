@@ -13,7 +13,10 @@ macro_rules! copy_vec {
     };
     ($n:literal => $($elem:expr),* $(,)?) => {
         $crate::copy_vec!(_, $n => $($elem),*)
-    }
+    };
+    ($n:literal) => {
+        $crate::CopyVec::<_, $n>::new()
+    };
 }
 
 pub struct CopyVec<T: Copy, const N: usize> {
@@ -71,7 +74,7 @@ impl<T: Copy, const N: usize> CopyVec<T, N> {
 
     pub fn pop(&mut self) -> Option<T> {
         if self.len > 0 {
-            let elem = unsafe { self.array[self.len].assume_init() };
+            let elem = unsafe { self.array[self.len - 1].assume_init() };
             self.len -= 1;
             Some(elem)
         } else {
@@ -228,7 +231,6 @@ impl<'de, T: Copy, const N: usize> Deserialize<'de> for CopyVec<T, N> where T: D
     }
 }
 
-
 #[cfg(feature = "serde")]
 struct CopyVecVisitor<T: Copy, const N: usize>(PhantomData<T>);
 
@@ -243,10 +245,11 @@ impl<'de, T: Copy, const N: usize> Visitor<'de> for CopyVecVisitor<T, N> where T
     fn visit_seq<S>(self, mut seq: S) -> Result<Self::Value, S::Error> where S: SeqAccess<'de> {
         let mut new_copyvec: CopyVec<T, N> = Default::default();
 
+        let expected_len = seq.size_hint();
         let mut cur_len = 0usize; // current length tracked in case of error
         while let Some(value) = seq.next_element()? {
             if let Err(_) = new_copyvec.try_push(value) {
-                let wanted_len = seq.size_hint().unwrap_or(cur_len);
+                let wanted_len = expected_len.unwrap_or(cur_len);
                 return Err(DeserializeError::invalid_length(wanted_len, &self));
             } else {
                 cur_len = cur_len + 1;
