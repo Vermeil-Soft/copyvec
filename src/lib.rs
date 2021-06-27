@@ -19,6 +19,7 @@ macro_rules! copy_vec {
     };
 }
 
+#[derive(Copy, Clone)]
 pub struct CopyVec<T: Copy, const N: usize> {
     len: usize,
     array: [MaybeUninit<T>; N],
