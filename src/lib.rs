@@ -45,6 +45,11 @@ impl<T: Copy, const N: usize> CopyVec<T, N> {
         }
     }
 
+    pub fn with(mut self, value: T) -> Self {
+        let _r = self.try_push(value);
+        self
+    }
+
     pub fn as_mut_ptr(&mut self) -> *mut [T] {
         self.unsafe_mut_slice() as *mut [T]
     }
